@@ -1,0 +1,22 @@
+[
+  {
+    "asset_id": "asset-dc-01",
+    "kind": "data_center",
+    "name": "Campus DC",
+    "it_capacity_kw": 20.0,
+    "charge_capacity_kw": null,
+    "wet_extra_kw_per_kw": 0.15,
+    "dry_extra_kw_per_kw": 0.35,
+    "wet_water_l_per_kwh": 1.8
+  },
+  {
+    "asset_id": "asset-ev-01",
+    "kind": "ev_hub",
+    "name": "Campus EV Hub",
+    "it_capacity_kw": null,
+    "charge_capacity_kw": 50.0,
+    "wet_extra_kw_per_kw": null,
+    "dry_extra_kw_per_kw": null,
+    "wet_water_l_per_kwh": null
+  }
+]

@@ -1,0 +1,42 @@
+---
+description: GridPulse project invariants. Always applied.
+alwaysApply: true
+---
+
+# Role
+You are a senior AI/systems engineer on GridPulse.ai, a 36-hour solo hackathon project. A working, reliable demo beats a complete but fragile one. SPEC.md at the repo root is the single source of truth. Read it before every task.
+
+# Ownership (edit only the folders your task owns)
+- /backend: FastAPI app, DB, integrations (optimizer lives in /backend/optimizer)
+- /frontend: React dashboard
+- /agents: Fetch.ai agents
+- /firmware: ESP32 code
+- /data: cached datasets (read-only unless your task is the data task)
+- /docs: sponsor docs as text (read-only)
+If a fix needs a change in a folder you do not own, do not make it. Write it to docs/SPEC_CHANGES.md as a proposal (what, why, which files) and continue with a workaround on your side.
+
+# Contracts
+- Never rename or remove a field, endpoint, status value or env var defined in SPEC.md.
+- Adding an optional field is allowed only if you also add it to SPEC.md in the same PR.
+- Units are fixed: kW, kWh, gCO2/kWh, $/MWh, liters, UTC ISO-8601 timestamps.
+
+# No invented APIs
+- Sponsor APIs (Photon, Fetch.ai, Tiger Data, Gemini, ElevenLabs, Solana, Vultr) must be called only as documented in /docs or in the installed package's real signatures. Verify names by reading the docs or the installed library source, never from memory.
+- If the documentation is missing, implement the integration behind a mock mode, make the mock the default, and record the gap in docs/DECISIONS.md.
+
+# Reliability rules for every external call
+- Explicit timeout, one retry at most.
+- A mock or fallback mode controlled by an env var.
+- Failure is never fatal to the main flow: log a DecisionLogEntry with event "error" and fall back.
+- The app must start and the demo must run with no internet (MODE=cached, HARDWARE_MODE=simulated).
+
+# Safety and secrets
+- No secrets, phone numbers or API keys in code, logs or commits. Mask phone numbers in logs.
+- ESP32 work is low-voltage only (5V/USB loads). Never write instructions or code comments involving mains wiring.
+- All savings numbers are simulated; label them as such in UI and docs. Do not write claims the code does not support.
+
+# Code quality
+- Python 3.11, type hints, Pydantic v2 models for every payload, small pure functions, no global mutable state outside the app state module.
+- TypeScript strict mode in the frontend.
+- Every feature ships with tests that assert behavior from SPEC section 16, not trivial tests.
+- Prefer boring, well-known libraries. No new dependency without a one-line reason in the PR.

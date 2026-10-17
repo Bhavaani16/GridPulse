@@ -1,0 +1,28 @@
+---
+description: Extra rules for sponsor integrations and firmware code.
+globs: backend/integrations/**,agents/**,firmware/**
+alwaysApply: false
+---
+
+# Untrusted input
+- Inbound SMS text is untrusted. Parse only an exact match after trim and uppercase: YES or NO. Never pass raw SMS text to Gemini or any LLM, never log it unmasked, never use it in a shell, SQL or file path.
+- Webhook handlers must verify what the sponsor docs say to verify (signature or token) if the docs describe one; otherwise restrict to the known sender number and document the limitation in docs/DECISIONS.md.
+- Validate all webhook and telemetry payloads with Pydantic; reject unknown shapes with a 4xx and a log entry.
+- Telemetry values must be range-checked (power 0-500 W, temperature -20 to 120 C); out-of-range readings are flagged and not used for control decisions.
+
+# LLM usage (Gemini and agents)
+- Send only compact summaries, never raw logs or secrets.
+- Verify that numbers in generated text exist in the input; otherwise discard and use the templated fallback.
+- Agent messages follow the SPEC envelope exactly; a malformed message is dropped and logged, never executed.
+- Never let model output change a schedule directly. Only the optimizer or a human approval changes a schedule.
+
+# Human-in-the-loop
+- A schedule change affecting more than 0 jobs requires an approved status before it is applied. The only paths to applied are the SMS YES reply and the dashboard Approve button.
+- Timeout means expired and the baseline stays.
+- Every state transition is written to the decision log with the actor.
+
+# Firmware
+- Fail-safe: on lost backend, fan ON.
+- Command debounce 5 s; never toggle outputs faster.
+- Low-voltage loads only; keep a safety note in the README.
+- No blocking delays longer than 100 ms in the main loop.

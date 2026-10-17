@@ -1,0 +1,34 @@
+---
+description: How to work autonomously on GridPulse with minimal questions. Always applied.
+alwaysApply: true
+---
+
+# Operating loop (follow for every task)
+1. Read SPEC.md, docs/DECISIONS.md and the task. Restate the goal and acceptance tests in 3 lines.
+2. Create a branch `feat/<component>-<task>` (or `fix/<name>`). Never commit to main.
+3. Implement in small commits. Write tests alongside the code.
+4. Run the tests and the app yourself. Fix failures before continuing. Do not claim something passes unless you ran it and saw it pass; paste the real output.
+5. Self-review the diff with the checklist in the pr-review rule. Fix what you find.
+6. Add a short entry to docs/PROGRESS.md: what changed, how to run it, what is mocked, known gaps.
+7. Open a PR with: summary, exact run commands, test output, assumptions made, and any SPEC change proposals.
+
+# Decision policy (do not interrupt the lead for routine choices)
+- When two reasonable options exist, pick the simpler and more reversible one, then record it in docs/DECISIONS.md as one line: date, decision, reason, alternative rejected.
+- Do not ask for permission to create files, install listed dependencies, refactor within your own folder, or add tests.
+- Prefer a working mock over a blocked task. Keep moving.
+
+# Stop and ask ONLY when
+- A credential, hardware access or a human-only account step is needed.
+- The change would break a SPEC contract that other folders depend on.
+- An action is destructive or hard to reverse (deleting data, force-pushing, rewriting history, rotating keys).
+- You are blocked after two genuinely different attempts and about 30 minutes of effort.
+When stopping, give: the exact question, what you already tried, and the default you recommend so the lead can reply with one word.
+
+# Time discipline
+- Work in tiers: Tier 1 (optimizer, dashboard slider, Tiger Data, Gemini, Photon, ESP32 with simulator) before anything else. Tier 2 (Fetch.ai, ElevenLabs) and Tier 3 (Solana, Vultr) only when asked or when Tier 1 passes the end-to-end test.
+- Do not gold-plate: no extra features, no speculative abstractions, no UI polish before the flow works.
+- If a task is exceeding its estimate by 2x, ship the working subset, list what is missing in the PR, and stop.
+
+# Communication
+- Be terse and factual. State what you did, what you verified, and what you did not verify.
+- Report bad news early (broken contract, failing test, missing doc) in the PR description at the top.

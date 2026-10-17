@@ -1,0 +1,4 @@
+.env
+.venv
+firmware/config.h
+backend/.local/
