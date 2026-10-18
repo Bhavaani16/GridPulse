@@ -153,3 +153,9 @@
 - Live Gemini verified locally (`gemini-flash-lite-latest`, α 0/0.5/1: source `gemini`, 0.9–2.1 s, 0 error rows, key not in uvicorn log) and on the public site after deploy (α 0/0.5/1: source `gemini`, 1.6–1.9 s; `/api/health` `gemini_mode live`, `database postgres`; key not in container logs).
 - Deploy: rsync (excluding `.env`, `deploy/secrets`), server `.env` got `GEMINI_MODE=live`, `GEMINI_MODEL=gemini-flash-lite-latest`, `GEMINI_API_KEY` via a stdin-fed script (values never echoed), `docker compose up -d --build`; `solders 0.29.0` confirmed inside the image; healthcheck PASS.
 - Still mock on the server: Photon (needs the lead's keys + webhook destination) and Solana (needs a funded keypair). Steps are in the chat hand-off and `DEPLOY.md`.
+
+## 2026-10-18 Solana live on the public demo
+
+- Lead created and funded a devnet keypair (5 SOL) and copied it to `/opt/gridpulse/deploy/secrets/solana-keypair.json`. Server `.env`: `SOLANA_MODE=live`, `SOLANA_KEYPAIR_PATH=/run/secrets/solana-keypair.json`; `docker compose up -d backend`.
+- Verified: `/api/health` `solana_mode live`; approve on `sch-20261018T182642Z-a050` returned 200 in 1.5 s and the feed got `settlement_tx {mode: live, signature: hZbSQx…, explorer_url: …?cluster=devnet}`. `getTransaction` on devnet: slot 512525996, err None, fee 5000 lamports, one `spl-memo` instruction carrying `{"carbon_saved_kg":18.212819,"gridpulse":1,"hash":"055e72…","schedule_id":"sch-20261018T182642Z-a050"}` (section-14 memo, keys sorted).
+- Remaining mock on the server: Photon only.

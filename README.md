@@ -21,7 +21,7 @@ Live demo: https://45-32-137-12.sslip.io
 | Gemini explanation | Real in the live demo | `GEMINI_MODE=live` calls `models.generateContent` over REST (`docs/gemini.txt`) with `gemini-flash-lite-latest`, about 2 s. Every number in the model text must match the schedule summary within 0.05 or the section-11 template is shown instead, labelled `template fallback`. |
 | Hardware (ESP32 fan) | Out of scope | Telemetry and the fan command come from a simulator (`hardware_mode simulated`). |
 | Fetch.ai agents | Working locally, Tier 2 | Three in-process agents negotiate over real uAgents envelopes in one Bureau. Not registered on Agentverse. |
-| Solana devnet log | Mock in the live demo | Mock signatures, no socket. The live path (keypair, blockhash, Memo instruction, `sendTransaction`) is verified against devnet; it needs a funded keypair in `deploy/secrets/` and `SOLANA_MODE=live`. |
+| Solana devnet log | Real in the live demo | Every applied schedule writes an SPL Memo transaction on devnet (`schedule_id`, `carbon_saved_kg`, schedule hash) from a background thread; the feed links to the explorer. Mock signatures when `SOLANA_MODE=mock`. |
 | ElevenLabs voiceover | Planned | Not built. |
 | Vultr deployment | Real | One Ubuntu instance, Docker Compose, Caddy with automatic HTTPS. |
 
@@ -110,6 +110,6 @@ Last run: backend, optimizer and agents `80 passed`; frontend `12 passed`. The I
 
 ## Built with
 
-FastAPI, React and Vite, SciPy HiGHS, Tiger Data (Postgres and TimescaleDB), Photon (mock in the demo), Gemini (live in the demo), Fetch.ai uAgents, Solana devnet (mock in the demo), Vultr, Caddy.
+FastAPI, React and Vite, SciPy HiGHS, Tiger Data (Postgres and TimescaleDB), Photon (mock in the demo), Gemini (live in the demo), Fetch.ai uAgents, Solana devnet (live in the demo), Vultr, Caddy.
 
 AI coding agents wrote much of this code under the written spec in `SPEC.md`, with human review and the tests above.
