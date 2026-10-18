@@ -108,3 +108,10 @@
 - Bug found via deployed decision log: `error {integration: integrations, "agents_bridge: No module named 'agents'"}` — `/agents` was never copied into the backend image. Fixed within scope by `deploy/Dockerfile.backend` (backend Dockerfile + `COPY agents/ /agents/`); compose now builds it.
 - Verified live after fix: `POST /api/optimize` + `request-approval` → `pending_approval` and 10 `negotiation_msg` envelopes (inform, proposes, dc counter, 2× ev counter, round 2) on the public instance.
 - Webhook: `POST https://45-32-137-12.sslip.io/api/webhooks/photon` verified end-to-end — a mock-mode reply body returns `{"status":"ignored","reason":"not_pending"}` and writes `sms_reply` with the masked phone. For REAL Photon deliveries the server needs `PHOTON_MODE=live` + `PHOTON_API_KEY`/`PHOTON_PROJECT_ID`/`PHOTON_WEBHOOK_SECRET`/`PHOTON_PLATFORM`/`OPERATOR_PHONE` typed on the server (mock mode returns 422 on real Photon envelopes — signature checks only run in live mode), then `docker compose up -d` to re-create the backend.
+
+## 2026-10-18 published to GitHub
+
+- Verified before publishing: `cd backend && .local/venv/bin/python -m pytest tests -q` -> `46 passed`; `cd frontend && npm run build` -> clean (vite 8.3.4); `MODE=cached HARDWARE_MODE=simulated uvicorn main:app --port 8000` -> `/api/health` ok, `POST /api/optimize {"alpha":0.5}` returned a real 24-slot schedule.
+- Published: all work committed as `d0f9413` on `main` (fast-forwarded from `feat/optimizer-core`) and pushed to https://github.com/Bhavaani16/GridPulse (public). Both `main` and `feat/optimizer-core` are on the remote.
+- Secrets: `.env`, venvs, `node_modules`, `dist`, `*.db`, `.DS_Store` are gitignored; no keys in the tree.
+- Note: git user.name/email are unset globally on this machine; the commit used GIT_AUTHOR_* env vars. Push used a one-off PAT in the URL — origin is set to the clean HTTPS URL, so future pushes need a credential (`gh auth login` or keychain).
