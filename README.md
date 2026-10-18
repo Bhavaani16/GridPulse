@@ -17,7 +17,7 @@ Live demo: https://45-32-137-12.sslip.io
 | Savings | Simulated | Baseline runs every job at its earliest slot with wet cooling. The label `SIMULATED SAVINGS` is on every screen. |
 | Human approval | Real state machine | Dashboard Approve/Reject, and an SMS webhook with YES/NO, one clarification, duplicate suppression, and a 300 s expiry. |
 | Tiger Data | Real when `DATABASE_URL` is set | Hypertables and a `telemetry_1m` continuous aggregate on Tiger Cloud (Postgres 18, TimescaleDB 2.30). SQLite when the URL is empty. The live demo runs on Tiger Cloud. |
-| Photon SMS | Mock in the live demo | The mock sends no SMS and runs the same state machine. `scripts/simulate_reply.py YES` or the webhook endpoint stand in for the phone. A live Photon path exists behind `PHOTON_MODE=live` and is not tested end to end. |
+| Photon SMS | Real in the live demo | `PHOTON_MODE=live` sends the approval text over iMessage to `OPERATOR_PHONE`; the reply comes back through a Standard-Webhooks-signed `message.received` delivery to `/api/webhooks/photon`, and only `YES`/`NO` from the operator number is acted on. `PHOTON_MODE=mock` runs the same state machine without a phone (`scripts/simulate_reply.py YES`). |
 | Gemini explanation | Real in the live demo | `GEMINI_MODE=live` calls `models.generateContent` over REST (`docs/gemini.txt`) with `gemini-flash-lite-latest`, about 2 s. Every number in the model text must match the schedule summary within 0.05 or the section-11 template is shown instead, labelled `template fallback`. |
 | Hardware (ESP32 fan) | Out of scope | Telemetry and the fan command come from a simulator (`hardware_mode simulated`). |
 | Fetch.ai agents | Working locally, Tier 2 | Three in-process agents negotiate over real uAgents envelopes in one Bureau. Not registered on Agentverse. |
@@ -110,6 +110,6 @@ Last run: backend, optimizer and agents `80 passed`; frontend `12 passed`. The I
 
 ## Built with
 
-FastAPI, React and Vite, SciPy HiGHS, Tiger Data (Postgres and TimescaleDB), Photon (mock in the demo), Gemini (live in the demo), Fetch.ai uAgents, Solana devnet (live in the demo), Vultr, Caddy.
+FastAPI, React and Vite, SciPy HiGHS, Tiger Data (Postgres and TimescaleDB), Photon (live in the demo), Gemini (live in the demo), Fetch.ai uAgents, Solana devnet (live in the demo), Vultr, Caddy.
 
 AI coding agents wrote much of this code under the written spec in `SPEC.md`, with human review and the tests above.
