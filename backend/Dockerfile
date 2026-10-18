@@ -9,6 +9,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ ./
 COPY data/ /data/
+# integrations/gemini.py gates live mode on /docs/gemini.txt (the
+# documented request shape); the file resolves to /docs inside the image.
+COPY docs/gemini.txt /docs/gemini.txt
 
 ENV DATA_DIR=/data \
     MODE=cached \

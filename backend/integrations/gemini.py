@@ -11,14 +11,15 @@ receives only the section-11 summary object plus the section-11
 instruction string — never raw logs, phone numbers, or secrets.
 
 GEMINI_MODE=mock (default) returns the template without a network call.
-GEMINI_MODE=live needs GEMINI_MODEL, GEMINI_API_KEY, and the SDK usage
-from /docs/gemini.txt. That file is missing, so no documented request
-shape exists and the live path falls back to the template after logging
-an error. Do not guess a model name or an SDK call.
+GEMINI_MODE=live needs GEMINI_MODEL and GEMINI_API_KEY and calls
+models.generateContent over REST exactly as /docs/gemini.txt documents
+(6 s timeout, one retry, number guard, template fallback on any failure).
+No model id is hardcoded; it comes from GEMINI_MODEL.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -26,12 +27,15 @@ from concurrent.futures import TimeoutError as FutureTimeoutError
 from pathlib import Path
 from typing import Any, Optional
 
+import httpx
+
 from decision_log import write_log
 from optimizer.models import GridSignal, Schedule, Slot
 from state import get_state
 
 GEMINI_TIMEOUT_SECONDS = 6.0  # SPEC section 11
 MAX_ATTEMPTS = 2  # the initial call plus one retry
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com"
 DOCS_PATH = Path(__file__).resolve().parents[2] / "docs" / "gemini.txt"
 
 INSTRUCTION = (
@@ -203,16 +207,18 @@ def build_summary(
         "cooling_dry_hours": [
             slot.t for slot in schedule.slots if slot.cooling_mode == "dry"
         ],
+        # Two decimals: the model repeats these verbatim, and the number
+        # guard compares its text against this same object.
         "savings_pct": {
-            "cost": schedule.savings_pct.cost,
-            "carbon": schedule.savings_pct.carbon,
-            "water": schedule.savings_pct.water,
+            "cost": round(schedule.savings_pct.cost, 2),
+            "carbon": round(schedule.savings_pct.carbon, 2),
+            "water": round(schedule.savings_pct.water, 2),
         },
         "metrics": {
-            "cost_usd": schedule.metrics.cost_usd,
-            "carbon_kg": schedule.metrics.carbon_kg,
-            "water_l": schedule.metrics.water_l,
-            "energy_kwh": schedule.metrics.energy_kwh,
+            "cost_usd": round(schedule.metrics.cost_usd, 2),
+            "carbon_kg": round(schedule.metrics.carbon_kg, 2),
+            "water_l": round(schedule.metrics.water_l, 2),
+            "energy_kwh": round(schedule.metrics.energy_kwh, 2),
         },
     }
 
@@ -247,17 +253,66 @@ def _numbers_ok(text: str, summary: dict[str, Any]) -> bool:
     return True
 
 
-def _generate_model_text(summary: dict[str, Any]) -> str:
-    """One Gemini generate request carrying a GEMINI_TIMEOUT_SECONDS bound.
+def build_request(model: str, summary: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    """URL and JSON body for models.generateContent as /docs/gemini.txt
+    documents. The model only sees INSTRUCTION and the summary JSON."""
+    url = f"{GEMINI_BASE_URL}/v1beta/models/{model}:generateContent"
+    body = {
+        "systemInstruction": {"parts": [{"text": INSTRUCTION}]},
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": json.dumps(summary, sort_keys=True)}],
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.2,
+            # Thinking models count their reasoning tokens against this
+            # limit (observed: 244 thought tokens + 8 text tokens hit a
+            # 256 cap with finishReason MAX_TOKENS). thinkingConfig is not
+            # sent because the docs say it errors on non-thinking models.
+            "maxOutputTokens": 2048,
+            "candidateCount": 1,
+        },
+    }
+    return url, body
 
-    The request must be built exactly as /docs/gemini.txt documents, with
-    the model id from GEMINI_MODEL, the key from GEMINI_API_KEY, and a
-    body of INSTRUCTION plus the JSON summary — nothing else. Until that
-    file exists there is no documented call, so this raises
-    GeminiNotConfigured and explain falls back to the template (SPEC
-    section 11 TODO).
-    """
-    raise GeminiNotConfigured("no documented request in /docs/gemini.txt")
+
+def extract_text(response_json: dict[str, Any]) -> str:
+    """candidates[0].content.parts[*].text joined; empty string when the
+    response has no text part (blocked prompt, empty candidate) or when
+    the candidate did not reach a natural stop (MAX_TOKENS, SAFETY, ...),
+    so a cut-off sentence is never cached as an explanation."""
+    candidates = response_json.get("candidates") or []
+    if not candidates:
+        return ""
+    if candidates[0].get("finishReason", "STOP") != "STOP":
+        return ""
+    parts = (candidates[0].get("content") or {}).get("parts") or []
+    return "".join(
+        str(part.get("text", "")) for part in parts if isinstance(part, dict)
+    ).strip()
+
+
+def _generate_model_text(summary: dict[str, Any]) -> str:
+    """One Gemini generate request (REST, /docs/gemini.txt). The key goes
+    in the x-goog-api-key header, never in the URL, so it cannot leak
+    through an exception message or access log."""
+    config = get_state().config
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not config.gemini_model or not api_key:
+        raise GeminiNotConfigured("GEMINI_MODEL or GEMINI_API_KEY is empty")
+    url, body = build_request(config.gemini_model, summary)
+    response = httpx.post(
+        url,
+        json=body,
+        headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
+        timeout=GEMINI_TIMEOUT_SECONDS,
+    )
+    if response.status_code != 200:
+        # Body may echo the model id or a quota message; never the key.
+        raise RuntimeError(f"gemini http {response.status_code}")
+    return extract_text(response.json())
 
 
 def _generate_with_timeout(summary: dict[str, Any]) -> str:

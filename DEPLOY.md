@@ -58,8 +58,12 @@ Minimum to edit:
 | `GEMINI_API_KEY`, `SOLANA_KEYPAIR_PATH`, Photon/ElevenLabs vars | fill if going live; leave modes on `mock`/`local` otherwise |
 
 Keep `MODE=cached`, `HARDWARE_MODE=simulated`, `HORIZON_MODE=today`
-(SPEC section 4). If `SOLANA_MODE=live`, also copy the devnet keypair
-file to the server and point `SOLANA_KEYPAIR_PATH` at it.
+(SPEC section 4). If `SOLANA_MODE=live`, copy the devnet keypair file to
+`/opt/gridpulse/deploy/secrets/solana-keypair.json` (the folder is
+gitignored and mounted read-only at `/run/secrets` in the backend
+container) and set `SOLANA_KEYPAIR_PATH=/run/secrets/solana-keypair.json`.
+For `GEMINI_MODE=live` set `GEMINI_MODEL=gemini-flash-lite-latest` and
+`GEMINI_API_KEY`; see `docs/gemini.txt` for why that model.
 
 ## 4. Up
 

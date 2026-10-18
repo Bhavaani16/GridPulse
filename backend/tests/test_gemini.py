@@ -198,8 +198,11 @@ def test_summary_object_and_instruction(live_client, monkeypatch):
                 j.job_id == job_id and j.fraction > 0 for j in slot.jobs
             )
         ]
-    assert summary["savings_pct"]["cost"] == schedule.savings_pct.cost
-    assert summary["metrics"]["cost_usd"] == schedule.metrics.cost_usd
+    # Rounded to two decimals so the model repeats readable numbers; the
+    # guard compares against this same rounded object.
+    assert summary["savings_pct"]["cost"] == round(schedule.savings_pct.cost, 2)
+    assert summary["metrics"]["cost_usd"] == round(schedule.metrics.cost_usd, 2)
+    assert abs(summary["savings_pct"]["cost"] - schedule.savings_pct.cost) < 0.005
     assert gemini.INSTRUCTION == (
         "Write 2 or 3 plain sentences. Mention the carbon versus water "
         "trade-off at this alpha. Use only numbers that appear in the "
@@ -254,3 +257,85 @@ def test_live_unconfigured_logs_error(tmp_path, monkeypatch):
         assert calls == []
         assert _gemini_errors()
     gemini.clear_cache()
+
+
+# --- REST transport (docs/gemini.txt) ---------------------------------
+
+
+def _fake_post(recorder: list, status: int = 200, body: dict | None = None):
+    import httpx
+
+    def fake(url, json=None, headers=None, timeout=None):
+        recorder.append({"url": url, "json": json, "headers": headers, "timeout": timeout})
+        return httpx.Response(
+            status, json=body if body is not None else {}, request=httpx.Request("POST", url)
+        )
+
+    return fake
+
+
+def test_rest_request_matches_docs(live_client, monkeypatch):
+    """URL, header auth, body shape and timeout follow docs/gemini.txt;
+    the key is in the header only and the body is INSTRUCTION + summary."""
+    calls: list = []
+    body = {"candidates": [{"content": {"parts": [{"text": VALID_TEXT}]}}]}
+    monkeypatch.setattr(gemini.httpx, "post", _fake_post(calls, 200, body))
+    schedule, signals, prev = _optimized(live_client)
+    text, source = gemini.explain_with_source(schedule, signals, prev)
+    assert source == "gemini" and text == VALID_TEXT
+    assert len(calls) == 1
+    call = calls[0]
+    assert call["url"] == (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        "gemini-test-model:generateContent"
+    )
+    assert "key=" not in call["url"]
+    assert call["headers"]["x-goog-api-key"] == "test-key-not-real"
+    assert call["timeout"] == gemini.GEMINI_TIMEOUT_SECONDS
+    assert call["json"]["systemInstruction"]["parts"][0]["text"] == gemini.INSTRUCTION
+    assert call["json"]["contents"][0]["role"] == "user"
+    sent = call["json"]["contents"][0]["parts"][0]["text"]
+    import json as _json
+
+    assert _json.loads(sent) == gemini.build_summary(schedule, signals, prev)
+    assert call["json"]["generationConfig"]["candidateCount"] == 1
+
+
+def test_rest_http_error_falls_back_without_leaking_key(live_client, monkeypatch):
+    calls: list = []
+    monkeypatch.setattr(
+        gemini.httpx, "post", _fake_post(calls, 429, {"error": {"message": "quota"}})
+    )
+    schedule, signals, prev = _optimized(live_client)
+    text, source = gemini.explain_with_source(schedule, signals, prev)
+    assert source == "fallback" and text == gemini._template_text(schedule)
+    assert len(calls) == gemini.MAX_ATTEMPTS  # one retry
+    errors = _gemini_errors()
+    assert errors and "RuntimeError" in errors[-1].payload["message"]
+    assert "test-key-not-real" not in str([e.payload for e in errors])
+
+
+def test_extract_text_handles_empty_candidates():
+    assert gemini.extract_text({}) == ""
+    assert gemini.extract_text({"candidates": []}) == ""
+    assert gemini.extract_text({"candidates": [{"content": {}}]}) == ""
+    assert (
+        gemini.extract_text(
+            {"candidates": [{"content": {"parts": [{"text": "a "}, {"text": "b"}]}}]}
+        )
+        == "a b"
+    )
+
+
+def test_extract_text_rejects_truncated_candidate():
+    """A MAX_TOKENS candidate (thinking tokens ate the budget) is not an
+    explanation; the caller falls back to the template instead of
+    caching a cut-off sentence."""
+    truncated = {
+        "candidates": [
+            {"content": {"parts": [{"text": "At an alpha of 0"}]}, "finishReason": "MAX_TOKENS"}
+        ]
+    }
+    assert gemini.extract_text(truncated) == ""
+    ok = {"candidates": [{"content": {"parts": [{"text": "fine."}]}, "finishReason": "STOP"}]}
+    assert gemini.extract_text(ok) == "fine."
