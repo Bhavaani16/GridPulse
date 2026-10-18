@@ -1,0 +1,71 @@
+{
+  "_note": "The data.object below is a REAL inbound message fetched from GET /v1/projects/{id}/messages/{messageId} after a live reply on 2026-10-18 (message.received, platform imessage, shared line). The outer envelope fields (id/type/apiVersion/source/timestamp/data) follow the documented apiVersion=2026-07-01 schema; the exact envelope id was not captured. Phone numbers are masked per SPEC (last 2 chars kept).",
+  "id": "pho_evt_<envelope-id-not-captured>",
+  "type": "message.received",
+  "apiVersion": "2026-07-01",
+  "source": "imessage.photon",
+  "timestamp": "2026-10-18T00:23:34Z",
+  "data": {
+    "projectId": "pho_prj_01m55ffk05esk81k7wtgt6qhrv",
+    "object": {
+      "id": "pho_msg_4898950esdg5erz1h7zs0bteej",
+      "platform": "imessage",
+      "status": "received",
+      "content": {
+        "type": "text",
+        "format": "plain",
+        "text": "YES "
+      },
+      "sentBy": {
+        "id": "pho_usr_6xsa8ypz84hxgb4957wtr89b1r",
+        "kind": "human",
+        "handle": "**********60",
+        "platform": "imessage",
+        "projectId": "pho_prj_01m55ffk05esk81k7wtgt6qhrv",
+        "details": {},
+        "metadata": {}
+      },
+      "receivedBy": {
+        "id": "pho_usr_5qtjzcqd39hfabafgkp4r9yq5j",
+        "kind": "agent",
+        "handle": "**********22",
+        "platform": "imessage",
+        "projectId": "pho_prj_01m55ffk05esk81k7wtgt6qhrv",
+        "details": { "type": "shared" },
+        "metadata": {}
+      },
+      "space": {
+        "id": "pho_spc_26zgn6aw5ygz79a3z89z56fcze",
+        "kind": "direct",
+        "platform": "imessage",
+        "projectId": "pho_prj_01m55ffk05esk81k7wtgt6qhrv",
+        "participantIds": [
+          "pho_usr_5qtjzcqd39hfabafgkp4r9yq5j",
+          "pho_usr_6xsa8ypz84hxgb4957wtr89b1r"
+        ],
+        "details": {},
+        "metadata": {}
+      },
+      "metadata": { "transport": "imessage" },
+      "timestamps": { "receivedAt": "2026-10-18T00:23:34.176Z" },
+      "createdAt": "2026-10-18T00:23:34.466Z",
+      "updatedAt": "2026-10-18T00:23:34.466Z"
+    }
+  },
+  "field_mapping": {
+    "message_id": "data.object.id",
+    "from_number": "data.object.sentBy.handle",
+    "text": "data.object.content.text (only when content.type == \"text\")"
+  },
+  "signature_headers": {
+    "webhook-id": "delivery id, first component of the signed string",
+    "webhook-timestamp": "unix seconds; reject beyond ~300 s",
+    "webhook-signature": "'v1,<base64-HMAC-SHA256>' over '<webhook-id>.<webhook-timestamp>.<rawBody>' keyed by the destination's signingSecret (whsec_...)"
+  },
+  "mock_webhook_body": {
+    "_comment": "Mock-mode contract body for POST /api/webhooks/photon (what scripts/simulate_reply.py sends).",
+    "message_id": "sim-3f9a2c71",
+    "from_number": "+15551230000",
+    "text": "YES"
+  }
+}

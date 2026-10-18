@@ -1,0 +1,24 @@
+# Backend image used by deploy/docker-compose.yml. Same as
+# backend/Dockerfile (repo-root context) plus the /agents package:
+# integrations/agents_bridge.py appends the repo root to sys.path and
+# imports `agents`, so without this COPY the deployed backend logs
+# "agents_bridge: No module named 'agents'" and negotiate() is a no-op.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY backend/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY backend/ ./
+COPY data/ /data/
+COPY agents/ /agents/
+
+ENV DATA_DIR=/data \
+    MODE=cached \
+    HARDWARE_MODE=simulated \
+    START_SIMULATOR=1 \
+    DATABASE_URL=
+
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

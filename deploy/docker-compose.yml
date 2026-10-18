@@ -1,0 +1,39 @@
+name: gridpulse
+
+# Two services: the FastAPI backend (backend/Dockerfile, repo-root context
+# so /data is inside the build) and the built frontend served by Caddy,
+# which also reverse-proxies /api. SITE_ADDRESS=demo.example.com gives
+# automatic HTTPS; SITE_ADDRESS=:80 serves plain HTTP on the instance IP.
+#
+# Infra vars come from deploy/.env (compose interpolation + backend
+# env_file are the same file):
+#   SITE_ADDRESS — ":80" or the DNS name pointing at this instance
+#   PUBLIC_URL   — http://<ip> or https://<domain>, baked into the web build
+
+services:
+  backend:
+    build:
+      context: ..
+      # deploy variant of backend/Dockerfile — also copies /agents so
+      # integrations.agents_bridge can import the negotiating agents.
+      dockerfile: deploy/Dockerfile.backend
+    env_file:
+      - .env
+    restart: unless-stopped
+    expose:
+      - "8000"
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+      args:
+        VITE_API_URL: ${PUBLIC_URL:-http://localhost}
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+    depends_on:
+      - backend

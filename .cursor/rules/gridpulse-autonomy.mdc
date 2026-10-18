@@ -5,12 +5,12 @@ alwaysApply: true
 
 # Operating loop (follow for every task)
 1. Read SPEC.md, docs/DECISIONS.md and the task. Restate the goal and acceptance tests in 3 lines.
-2. Create a branch `feat/<component>-<task>` (or `fix/<name>`). Never commit to main.
-3. Implement in small commits. Write tests alongside the code.
+2. Stay on the current files. Do not create a branch and do not commit. See the local-only rule.
+3. Implement the change and write tests alongside the code. Leave the files uncommitted.
 4. Run the tests and the app yourself. Fix failures before continuing. Do not claim something passes unless you ran it and saw it pass; paste the real output.
 5. Self-review the diff with the checklist in the pr-review rule. Fix what you find.
 6. Add a short entry to docs/PROGRESS.md: what changed, how to run it, what is mocked, known gaps.
-7. Open a PR with: summary, exact run commands, test output, assumptions made, and any SPEC change proposals.
+7. Do not push or open a PR. Put the summary, run commands, test output, assumptions, and any SPEC notes in docs/PROGRESS.md. The lead publishes to GitHub later.
 
 # Decision policy (do not interrupt the lead for routine choices)
 - When two reasonable options exist, pick the simpler and more reversible one, then record it in docs/DECISIONS.md as one line: date, decision, reason, alternative rejected.

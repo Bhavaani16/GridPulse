@@ -1,0 +1,21 @@
+# SITE_ADDRESS comes from the container environment (deploy/.env):
+#   ":80"              -> plain HTTP on the instance IP
+#   "demo.example.com" -> Caddy obtains and renews a Let's Encrypt cert
+#                         automatically (ports 80 and 443 must be open)
+{$SITE_ADDRESS} {
+	root * /srv/frontend
+
+	@api path /api/*
+	handle @api {
+		# flush_interval -1 so GET /api/stream (SSE) is not buffered.
+		reverse_proxy backend:8000 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		# Single-page app: unknown paths serve index.html.
+		try_files {path} /index.html
+		file_server
+	}
+}

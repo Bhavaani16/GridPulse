@@ -1,0 +1,14 @@
+fastapi==0.115.6
+uvicorn==0.34.0
+pydantic==2.10.6
+httpx==0.28.1
+pytest==8.3.4
+scipy==1.14.1
+python-dotenv==1.0.1
+# Postgres driver for the Tiger Data path (SPEC section 8). Only imported
+# when DATABASE_URL starts with postgres:// or postgresql://.
+psycopg[binary]==3.2.13
+
+# Fetch.ai uAgents SDK for FETCHAI_MODE=network (SPEC section 12).
+# Lazy-imported in agents/network.py; FETCHAI_MODE=local runs without it.
+uagents==0.26.1

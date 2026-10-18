@@ -4,3 +4,7 @@ firmware/config.h
 backend/.local/
 __pycache__/
 .pytest_cache/
+.DS_Store
+*.db
+node_modules/
+dist/
