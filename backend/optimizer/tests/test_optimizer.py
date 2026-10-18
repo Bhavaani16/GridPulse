@@ -1,4 +1,4 @@
-"""SPEC section 16 optimizer tests OPT-1 through OPT-9."""
+"""SPEC section 16 optimizer tests OPT-1 through OPT-11."""
 
 from __future__ import annotations
 
@@ -182,6 +182,48 @@ def test_opt_8_runtime(sample):
     wider_elapsed = time.perf_counter() - started
     assert isinstance(wider, Schedule)
     assert wider_elapsed < 2.0
+
+
+def test_opt_10_water_budget_holds_at_21_alphas(sample):
+    """Water <= (1 - alpha) * baseline water, and the slider has no cliff."""
+    signals, jobs, assets = sample
+    reference = baseline(signals, jobs, assets)
+    assert isinstance(reference, Schedule)
+    cap_base = reference.metrics.water_l
+    results = set()
+    for step in range(21):
+        alpha = step / 20
+        schedule = optimize(signals, jobs, assets, alpha)
+        assert isinstance(schedule, Schedule)
+        assert schedule.metrics.water_l <= (1 - alpha) * cap_base + 1e-3
+        results.add((schedule.metrics.cost_usd, schedule.metrics.carbon_kg, schedule.metrics.water_l))
+    assert len(results) >= 15
+
+
+def test_opt_11_reference_values(sample):
+    """Project brief part 4 reference table, tolerance 0.05."""
+    signals, jobs, assets = sample
+    reference = baseline(signals, jobs, assets)
+    assert isinstance(reference, Schedule)
+    assert reference.metrics.cost_usd == pytest.approx(5.63, abs=0.05)
+    assert reference.metrics.carbon_kg == pytest.approx(30.29, abs=0.05)
+    assert reference.metrics.water_l == pytest.approx(104.06, abs=0.05)
+    expected = {
+        0.0: (2.86, 11.45),
+        0.5: (3.02, 12.08),
+        1.0: (3.19, 12.75),
+    }
+    for alpha, (cost, carbon) in expected.items():
+        schedule = optimize(signals, jobs, assets, alpha)
+        assert isinstance(schedule, Schedule)
+        assert schedule.metrics.cost_usd == pytest.approx(cost, abs=0.05)
+        assert schedule.metrics.carbon_kg == pytest.approx(carbon, abs=0.05)
+    half = optimize(signals, jobs, assets, 0.5)
+    assert isinstance(half, Schedule)
+    assert half.metrics.water_l == pytest.approx(52.03, abs=0.05)
+    full = optimize(signals, jobs, assets, 1.0)
+    assert isinstance(full, Schedule)
+    assert full.metrics.water_l == 0.0
 
 
 def test_opt_9_savings_pct_zeros_and_zero_baseline():

@@ -3,7 +3,7 @@
 // unset), the whole page falls back to the mock client and shows the banner.
 
 import { useCallback, useEffect, useState } from 'react'
-import { createHttpClient, type ApiClient } from './api/client'
+import { ApiError, createHttpClient, type ApiClient } from './api/client'
 import { createMockClient } from './mock/client'
 import type {
   ExplainResponse,
@@ -23,6 +23,7 @@ import { SignalsChart } from './components/SignalsChart'
 import { TelemetryChart } from './components/TelemetryChart'
 import { Timeline } from './components/Timeline'
 import { useDecisionFeed } from './hooks/useDecisionFeed'
+import { usePendingSchedule } from './hooks/usePendingSchedule'
 import { useTelemetry } from './hooks/useTelemetry'
 
 const DEFAULT_ALPHA = 0.5
@@ -161,6 +162,8 @@ export default function App() {
 
   const telemetry = useTelemetry(client)
 
+  usePendingSchedule(client, schedule, setSchedule)
+
   const act = useCallback(async (fn: (c: ApiClient, id: string) => Promise<Schedule>) => {
     const id = schedule?.schedule_id
     if (!client || !id) return
@@ -169,6 +172,13 @@ export default function App() {
     try {
       setSchedule(await fn(client, id))
     } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        try {
+          setSchedule(await client.getSchedule(id))
+        } catch {
+          // keep the 409 message below
+        }
+      }
       setScheduleError(errMsg(e))
     } finally {
       setActionBusy(false)
@@ -201,6 +211,7 @@ export default function App() {
       await refreshStatic(client)
       const applied = await client.getAppliedSchedule()
       setSchedule(applied)
+      setAlpha(applied.alpha)
       setFeedNonce((n) => n + 1)
     } catch (e) {
       setScheduleError(errMsg(e))

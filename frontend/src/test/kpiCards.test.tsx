@@ -22,13 +22,33 @@ describe('KpiCards (FE-2)', () => {
 
     // absolute deltas: baseline_metrics minus metrics
     expect(
-      screen.getByText(fmtUsd(schedule.baseline_metrics.cost_usd - schedule.metrics.cost_usd)),
+      screen.getByText(
+        fmtUsd(Math.abs(schedule.baseline_metrics.cost_usd - schedule.metrics.cost_usd)),
+      ),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(fmtKg(schedule.baseline_metrics.carbon_kg - schedule.metrics.carbon_kg)),
+      screen.getByText(
+        fmtKg(Math.abs(schedule.baseline_metrics.carbon_kg - schedule.metrics.carbon_kg)),
+      ),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(fmtLiters(schedule.baseline_metrics.water_l - schedule.metrics.water_l)),
+      screen.getByText(
+        fmtLiters(Math.abs(schedule.baseline_metrics.water_l - schedule.metrics.water_l)),
+      ),
     ).toBeInTheDocument()
+  })
+
+  it('says increased and keeps the dollar amount positive when cost is worse', async () => {
+    const client = createMockClient(new Date('2026-10-17T12:00:00Z'))
+    const schedule = await client.optimize({ alpha: 0.5 })
+    const worse = {
+      ...schedule,
+      metrics: { ...schedule.metrics, cost_usd: schedule.baseline_metrics.cost_usd + 1 },
+      savings_pct: { ...schedule.savings_pct, cost: -10 },
+    }
+    render(<KpiCards schedule={worse} />)
+    expect(screen.getByText(/increased/)).toBeInTheDocument()
+    expect(screen.getByText('$1.00')).toBeInTheDocument()
+    expect(screen.queryByText('$-1.00')).not.toBeInTheDocument()
   })
 })

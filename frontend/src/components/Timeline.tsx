@@ -3,7 +3,7 @@
 // faint overlay on curtailed hours.
 
 import type { GridSignal, Job, Schedule } from '../api/types'
-import { hourLabel } from '../utils/format'
+import { dryShare, hourLabel } from '../utils/format'
 import { Panel } from './Panel'
 
 const CURTAILMENT_THRESHOLD_MW = 50
@@ -114,25 +114,40 @@ export function Timeline({
               </div>
             ))}
 
-            {/* cooling mode strip */}
+            {/* cooling strip: dry share 0..1 per hour, letter = published mode */}
             <div
               className="mt-2 grid items-center gap-px"
               style={{ gridTemplateColumns: colTemplate }}
             >
               <div className="py-0.5 pr-2 text-xs text-slate-400">cooling</div>
-              {schedule.slots.map((s) => (
-                <div
-                  key={s.t}
-                  className={`flex h-4 items-center justify-center rounded-sm text-[9px] font-bold uppercase ${
-                    s.cooling_mode === 'wet'
-                      ? 'bg-sky-700/80 text-sky-100'
-                      : 'bg-amber-700/80 text-amber-100'
-                  } ${curtailed.has(s.t) ? 'ring-1 ring-violet-400/40' : ''}`}
-                  title={`slot ${s.t}: ${s.cooling_mode} cooling (yw ${s.yw_kw} kW, yd ${s.yd_kw} kW)`}
-                >
-                  {s.cooling_mode === 'wet' ? 'w' : 'd'}
-                </div>
-              ))}
+              {schedule.slots.map((s) => {
+                const share = dryShare(s.yw_kw, s.yd_kw)
+                const idle = s.it_load_kw === 0
+                return (
+                  <div
+                    key={s.t}
+                    className={`relative flex h-4 items-center justify-center overflow-hidden rounded-sm text-[9px] font-bold uppercase ${
+                      idle ? 'bg-slate-800/60 text-slate-500' : 'bg-sky-700/80 text-sky-50'
+                    } ${curtailed.has(s.t) ? 'ring-1 ring-violet-400/40' : ''}`}
+                    title={
+                      idle
+                        ? `slot ${s.t}: no IT load`
+                        : `slot ${s.t}: ${s.cooling_mode} cooling · dry share ${share.toFixed(2)} (yw ${s.yw_kw} kW, yd ${s.yd_kw} kW)`
+                    }
+                    data-testid="cooling-cell"
+                    data-dry-share={share.toFixed(2)}
+                  >
+                    {!idle && share > 0 && (
+                      <div
+                        className="absolute inset-y-0 left-0 bg-amber-600/90"
+                        style={{ width: `${Math.round(share * 100)}%` }}
+                        aria-hidden
+                      />
+                    )}
+                    <span className="relative">{idle ? '·' : s.cooling_mode === 'wet' ? 'w' : 'd'}</span>
+                  </div>
+                )
+              })}
             </div>
 
             {/* curtailment marker strip */}
@@ -165,7 +180,8 @@ export function Timeline({
                 <span className="h-2.5 w-2.5 rounded-sm bg-sky-700" /> wet cooling
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-sm bg-amber-700" /> dry cooling
+                <span className="h-2.5 w-2.5 rounded-sm bg-amber-600" /> dry cooling (fill = dry share of
+                the hour)
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rotate-45 rounded-[2px] bg-violet-400" /> curtailment ≥{' '}

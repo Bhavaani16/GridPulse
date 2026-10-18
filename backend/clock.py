@@ -9,14 +9,15 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 
-def now_dt() -> datetime:
-    return datetime.now(timezone.utc)
-
-
 def now_utc() -> str:
-    now = now_dt()
+    """The only place the backend reads the wall clock (SPEC section 4)."""
+    now = datetime.now(timezone.utc)
     stamp = now.strftime("%Y-%m-%dT%H:%M:%S")
     return f"{stamp}.{now.microsecond // 1000:03d}Z"
+
+
+def now_dt() -> datetime:
+    return parse_ts(now_utc())
 
 
 def iso(dt: datetime) -> str:

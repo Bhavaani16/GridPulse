@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+import clock
 from config import DISK_HORIZON_START, Config
 from optimizer.models import Asset, GridSignal, Job, parse_hour_ts
 
@@ -29,7 +30,7 @@ def _offset_seconds(config: Config) -> float:
     """today: local midnight now in HORIZON_TZ minus the on-disk start."""
     if config.horizon_mode == "fixed":
         return 0.0
-    local_midnight = datetime.now(ZoneInfo(config.horizon_tz)).replace(
+    local_midnight = clock.now_dt().astimezone(ZoneInfo(config.horizon_tz)).replace(
         hour=0, minute=0, second=0, microsecond=0
     )
     new_start = local_midnight.astimezone(timezone.utc)

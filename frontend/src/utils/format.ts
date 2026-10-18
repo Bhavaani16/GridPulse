@@ -40,6 +40,13 @@ export function fmtLiters(n: number): string {
   return `${n.toFixed(1)} L`
 }
 
+/** Share of an hour's cooling that is dry, 0..1. 0 when there is no IT load. */
+export function dryShare(ywKw: number, ydKw: number): number {
+  const total = ywKw + ydKw
+  if (total <= 0) return 0
+  return Math.min(1, Math.max(0, ydKw / total))
+}
+
 export function fmtPct(n: number): string {
   return `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`
 }

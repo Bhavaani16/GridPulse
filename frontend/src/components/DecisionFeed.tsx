@@ -20,13 +20,11 @@ const ACTOR_STYLE: Record<string, string> = {
   simulator: 'bg-rose-600',
 }
 
-const EXPLORER_BASE = 'https://explorer.solana.com/tx/'
-
 function settlementUrl(entry: DecisionLogEntry): string | null {
+  // SPEC 15: show explorer_url only when the payload actually has one.
+  // Mock settlements use a fake signature and explorer_url null.
   const url = entry.payload.explorer_url
-  if (typeof url === 'string') return url
-  const sig = entry.payload.signature
-  if (typeof sig === 'string' && sig.length > 0) return `${EXPLORER_BASE}${sig}?cluster=devnet`
+  if (typeof url === 'string' && url.length > 0) return url
   return null
 }
 
