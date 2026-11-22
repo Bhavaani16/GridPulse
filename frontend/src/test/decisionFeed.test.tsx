@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ApiClient } from '../api/client'
 import type { DecisionLogEntry } from '../api/types'
 import { DecisionFeed } from '../components/DecisionFeed'
-import { useDecisionFeed } from '../hooks/useDecisionFeed'
+import { mergeDecisionEntries, useDecisionFeed } from '../hooks/useDecisionFeed'
 
 function entry(logId: string, event: DecisionLogEntry['event'], ts: string): DecisionLogEntry {
   return {
@@ -29,6 +29,15 @@ function FeedHarness({ client }: { client: ApiClient }) {
     </div>
   )
 }
+
+describe('mergeDecisionEntries', () => {
+  it('sorts an older page that arrives after a newer batch', () => {
+    const newer = entry('log-new', 'applied', '2026-10-17T12:00:05.000Z')
+    const older = entry('log-old', 'startup', '2026-10-17T12:00:00.000Z')
+    const merged = mergeDecisionEntries([newer], [older])
+    expect(merged.map((row) => row.log_id)).toEqual(['log-old', 'log-new'])
+  })
+})
 
 describe('DecisionFeed (FE-3)', () => {
   afterEach(() => {
@@ -82,5 +91,19 @@ describe('DecisionFeed (FE-3)', () => {
       'href',
       'https://explorer.solana.com/tx/abc123signature?cluster=devnet',
     )
+  })
+
+  it('does not invent an explorer link when explorer_url is null', () => {
+    const tx: DecisionLogEntry = {
+      log_id: 'log-000000000004',
+      ts: '2026-10-17T12:00:00.000Z',
+      schedule_id: 'sch-test',
+      actor: 'solana',
+      event: 'settlement_tx',
+      payload: { signature: 'mocksig-abc', explorer_url: null, mode: 'mock' },
+    }
+    render(<DecisionFeed entries={[tx]} transport="sse" error={null} />)
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    expect(screen.getByText(/mode=mock/)).toBeInTheDocument()
   })
 })

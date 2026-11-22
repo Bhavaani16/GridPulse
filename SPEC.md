@@ -1738,11 +1738,13 @@ minimize
 
   0.3 * cost_term
 
-  + (1 - alpha) * carbon_term
+  + 1.0 * carbon_term
 
-  + alpha * water_term
+subject to the water budget
 
-cost_term is cost_usd / cost_base when cost_base > 0, else the cost term is omitted (coefficient 0). The same rule applies to carbon and water. Do not divide by zero.
+  water_l <= (1 - alpha) * water_base
+
+cost_term is cost_usd / cost_base when cost_base > 0, else the cost term is omitted (coefficient 0). The same rule applies to carbon. Do not divide by zero. Alpha is the water-reduction target from section 1: alpha 0 allows the full baseline water, alpha 1 allows none. (Changed 2026-10-18 from the weighted form 0.3 cost + (1 - alpha) carbon + alpha water, which produced only three distinct schedules across the slider on the sample; see docs/SPEC_CHANGES.md.)
 
 cost_usd   = sum_t total_load_kw[t] * price_usd_per_mwh[t] / 1000
 
@@ -1752,7 +1754,7 @@ water_l    = sum_t wet_water_l_per_kwh  *yw[t]*  water_stress_index[t]
 
 energy_kwh = sum_t total_load_kw[t]
 
-yw and yd stay linear. There is no binary cooling variable and no product of alpha with a variable inside the solver: alpha only changes the three numeric coefficients.
+yw and yd stay linear. There is no binary cooling variable and no product of alpha with a variable inside the solver: alpha only changes the right-hand side of the water budget row.
 
 Round each stored fraction and each metric to 6 decimal places.
 
@@ -2665,6 +2667,10 @@ OPT-7. A job with duration_h 30 returns OptimizeError infeasible and that job_id
 OPT-8. optimize on the sample returns in under 2 seconds.
 
 OPT-9. savings_pct(m, m) is all zeros. savings_pct when a baseline component is 0 yields 0 for that component and does not raise.
+
+OPT-10. For alpha in 0, 0.05, ..., 1 on the sample, water_l <= (1 - alpha) * baseline water_l, and at least 15 of the 21 results differ.
+
+OPT-11. On the sample, within 0.05: baseline cost 5.63, carbon 30.29, water 104.06; alpha 0 cost 2.86, carbon 11.45; alpha 0.5 cost 3.02, carbon 12.08, water 52.03; alpha 1 cost 3.19, carbon 12.75, water 0.0.
 
 Backend (D1)
 

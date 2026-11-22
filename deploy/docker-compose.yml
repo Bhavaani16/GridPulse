@@ -19,6 +19,11 @@ services:
       dockerfile: deploy/Dockerfile.backend
     env_file:
       - .env
+    # Secrets that are files, not env vars (the Solana devnet keypair).
+    # Put them in deploy/secrets/ on the server (gitignored) and point
+    # SOLANA_KEYPAIR_PATH at /run/secrets/<file>.
+    volumes:
+      - ./secrets:/run/secrets:ro
     restart: unless-stopped
     expose:
       - "8000"

@@ -29,7 +29,7 @@ Water for the day, in liters, is:
 
 `1.8 * yw * water_stress_index`, summed over the 24 hours
 
-1.8 is liters of water per kWh of IT on wet cooling, before stress. The stress index (about 0.68 to 0.76 in the sample) makes the same wet kilowatt cost more water in a drier hour. Dry kilowatts add zero water. Because the objective is a straight line, an hour is never better as a mix than as all-wet or all-dry. The published mode is dry when yd is larger than yw, and wet otherwise.
+1.8 is liters of water per kWh of IT on wet cooling, before stress. The stress index (about 0.68 to 0.76 in the sample) makes the same wet kilowatt cost more water in a drier hour. Dry kilowatts add zero water. With a water budget, one hour can be a mix of wet and dry, so each slot carries both `yw_kw` and `yd_kw`. The published mode is dry when yd is larger than yw, and wet otherwise.
 
 Site power in an hour, in kW, is:
 
@@ -43,15 +43,20 @@ The naive schedule starts every job in the first hour it is allowed to run, keep
 
 The optimized schedule minimizes:
 
-`0.3 * (cost / cost_baseline) + (1 - alpha) * (carbon / carbon_baseline) + alpha * (water / water_baseline)`
+`0.3 * (cost / cost_baseline) + 1.0 * (carbon / carbon_baseline)`
 
-Alpha is the slider, from 0 to 1.
+subject to a water budget:
 
-- Alpha 0 ignores water. The solver goes after carbon, and it always keeps a 30% weight on the electricity bill.
-- Alpha 1 ignores carbon. The solver goes after water. Dry cooling becomes attractive because it zeroes that hour's water, at the cost of more electricity. On the committed sample this drives water to zero: every IT kilowatt is dry-cooled. That is the objective at work, not a separate cap.
-- Dividing by the naive schedule puts dollars, kilograms, and liters on one scale. If a baseline number is 0, that term is dropped, so we never divide by zero.
+`water <= (1 - alpha) * water_baseline`
 
-Alpha only changes those three weights. It is not multiplied by a decision variable inside the model.
+Alpha is the slider, from 0 to 1. It is a water-reduction target.
+
+- Alpha 0 allows the full baseline water. The solver goes after carbon, and it always keeps a 30% weight on the electricity bill. Wet cooling is cheaper in electricity, so it stays wet.
+- Alpha 0.5 allows half the baseline water. The solver dry-cools just enough kilowatt-hours, in the hours where that costs the least carbon, to fit under the budget. On the committed sample that is about 48% of IT load.
+- Alpha 1 allows no water. Every IT kilowatt is dry-cooled.
+- Dividing by the naive schedule puts dollars and kilograms on one scale. If a baseline number is 0, that term is dropped, so we never divide by zero.
+
+Alpha only changes the right-hand side of the water row. It is not multiplied by a decision variable inside the model. Because the budget is a straight line in yw, water falls in a straight line as the slider moves, about 10 liters per 0.1 of alpha on the sample, and the earlier weighted objective, which jumped from all-wet to all-dry at one alpha, is gone.
 
 ## Limits, and a job that cannot fit
 

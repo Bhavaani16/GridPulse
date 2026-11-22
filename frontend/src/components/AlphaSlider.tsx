@@ -71,7 +71,8 @@ export function AlphaSlider({
         <span className="w-28 text-sm font-medium text-sky-300">Favor water</span>
       </div>
       <p className="mt-2 text-xs text-slate-500">
-        α weights the water-reduction target: 0 ignores cooling water, 1 uses no wet cooling.
+        α is the water-reduction target: cooling water is held at or below (1 − α) × the naive
+        baseline. 0 ignores water, 1 allows no wet cooling.
       </p>
     </section>
   )

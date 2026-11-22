@@ -32,8 +32,8 @@ export function DemoControls({
           Reset
         </button>
         <p className="text-xs text-slate-500">
-          Surplus bumps curtailment for the next four hours and re-optimizes. Reset restores the
-          cached baseline.
+          Surplus re-solves against a temporary 4-hour curtailment boost. The signal chart stays
+          on the cached curve. Reset restores the baseline schedule.
         </p>
       </div>
     </details>

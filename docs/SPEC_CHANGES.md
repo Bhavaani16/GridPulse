@@ -72,6 +72,13 @@ Update 2026-10-18: the lead said to source Fetch.ai docs from the web. `uagents=
 
 Update 2026-10-18: the lead funded the keypair (5.0 devnet SOL via the web faucet; RPC `requestAirdrop` stayed 429). One live memo transaction was sent and finalized — signature `3wSTTJs8C7CTF99aqSHhNa7rhwUWeBG6D26JyPRDhDasCGaQNThqfXzRN325HnA7nc7ENAdDq6mnbbQzTxJ2uEH9` (slot 512305556, err null). Live mode is tested end to end.
 
+## 2026-10-18 optimizer water budget
+
+- What: Section 7 had the weighted objective `0.3 cost + (1 - alpha) carbon + alpha water`. The project brief (October 18) and section 1 describe alpha as a water-reduction target: minimize `0.3 cost + 1.0 carbon` subject to `water_l <= (1 - alpha) * water_base`.
+- Why: On the sample the weighted form gave three distinct schedules across 21 alphas, all-wet below alpha 0.10 and all-dry above. The brief's part 4 table and the "21 different results" rule need the budget form. The lead asked for the app to follow the brief.
+- Files: `backend/optimizer/solver.py`, `backend/optimizer/FORMULATION.md`, `backend/optimizer/tests/test_optimizer.py` (OPT-10, OPT-11), SPEC section 7 and section 16.
+- Done. SPEC section 7 text now carries the budget form with a note on the change. The reference numbers at alpha 0, 0.5, 1 match the brief within 0.05 except water at alpha 0 (102.36 L here, 102.14 L in the brief): the water row is not binding there and the tie is broken by the solver.
+
 ## 2026-10-18 deploy packaging (D7 follow-up)
 
 - What: `backend/Dockerfile` does not copy `/agents`, so the deployed backend logged `agents_bridge: No module named 'agents'` at startup and `negotiate()` was a no-op on the server. `agents_bridge.py` appends the repo root (`parents[2]`) to `sys.path` and imports `agents`, which resolves inside the image only if `/agents` exists.

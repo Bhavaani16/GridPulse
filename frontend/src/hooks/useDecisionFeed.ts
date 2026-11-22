@@ -10,6 +10,25 @@ const POLL_MS = 2_000
 const SSE_FIRST_EVENT_MS = 2_000
 const MAX_ENTRIES = 200
 
+function byTime(a: DecisionLogEntry, b: DecisionLogEntry): number {
+  if (a.ts < b.ts) return -1
+  if (a.ts > b.ts) return 1
+  if (a.log_id < b.log_id) return -1
+  if (a.log_id > b.log_id) return 1
+  return 0
+}
+
+/** Ascending by timestamp. An older page that arrives after a newer one
+ * still sorts into place, and the list keeps the newest MAX_ENTRIES. */
+export function mergeDecisionEntries(
+  prev: DecisionLogEntry[],
+  incoming: DecisionLogEntry[],
+): DecisionLogEntry[] {
+  const seen = new Set(prev.map((entry) => entry.log_id))
+  const fresh = incoming.filter((entry) => !seen.has(entry.log_id))
+  return [...prev, ...fresh].sort(byTime).slice(-MAX_ENTRIES)
+}
+
 export type FeedTransport = 'connecting' | 'sse' | 'poll'
 
 export function useDecisionFeed(client: ApiClient | null): {
@@ -33,8 +52,12 @@ export function useDecisionFeed(client: ApiClient | null): {
       const fresh = items.filter((i) => !seen.current.has(i.log_id))
       if (fresh.length === 0) return
       for (const i of fresh) seen.current.add(i.log_id)
-      lastId.current = fresh[fresh.length - 1].log_id
-      setEntries((prev) => [...prev, ...fresh].slice(-MAX_ENTRIES))
+      setEntries((prev) => {
+        const merged = mergeDecisionEntries(prev, fresh)
+        const latest = merged[merged.length - 1]
+        if (latest) lastId.current = latest.log_id
+        return merged
+      })
     }
 
     const startPolling = () => {

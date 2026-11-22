@@ -49,10 +49,24 @@ def optimize(
         return solver_error(f"solver failed: {exc}")
 
 
+def water_budget_l(alpha: float, baseline_water_l: float) -> float:
+    """Water allowed at this alpha: (1 - alpha) times the naive baseline."""
+    return max(0.0, (1.0 - float(alpha)) * float(baseline_water_l))
+
+
 def _solve(problem: Problem, alpha: float, reference: Schedule) -> Union[Schedule, OptimizeError]:
     x_index, s_index, starts, yw_index, yd_index, count = _variables(problem)
-    objective = _objective(problem, alpha, reference, x_index, yw_index, yd_index, count)
-    matrix, lower, upper = _constraints(problem, x_index, s_index, starts, yw_index, yd_index, count)
+    objective = _objective(problem, reference, x_index, yw_index, yd_index, count)
+    matrix, lower, upper = _constraints(
+        problem,
+        x_index,
+        s_index,
+        starts,
+        yw_index,
+        yd_index,
+        count,
+        water_budget_l(alpha, reference.metrics.water_l),
+    )
     bounds_lower = np.zeros(count, dtype=float)
     bounds_upper = np.ones(count, dtype=float)
     integrality = np.zeros(count, dtype=int)
@@ -135,17 +149,16 @@ def _load_price(signal: GridSignal, cost_scale: float, carbon_scale: float) -> f
 
 def _objective(
     problem: Problem,
-    alpha: float,
     reference: Schedule,
     x_index: dict[tuple[str, int], int],
     yw_index: dict[int, int],
     yd_index: dict[int, int],
     count: int,
 ) -> np.ndarray:
+    """0.3 * cost_term + 1.0 * carbon_term. Water is the budget row, not a term."""
     metrics = reference.metrics
     cost_scale = 0.3 / metrics.cost_usd if metrics.cost_usd > 0 else 0.0
-    carbon_scale = (1.0 - alpha) / metrics.carbon_kg if metrics.carbon_kg > 0 else 0.0
-    water_scale = alpha / metrics.water_l if metrics.water_l > 0 else 0.0
+    carbon_scale = 1.0 / metrics.carbon_kg if metrics.carbon_kg > 0 else 0.0
     coefficients = np.zeros(count, dtype=float)
     for job in problem.jobs:
         for t in problem.windows[job.job_id]:
@@ -155,8 +168,6 @@ def _objective(
         price = _load_price(problem.signals[t], cost_scale, carbon_scale)
         coefficients[yw_index[t]] += problem.wet_extra_kw_per_kw * price
         coefficients[yd_index[t]] += problem.dry_extra_kw_per_kw * price
-        stress = problem.signals[t].water_stress_index
-        coefficients[yw_index[t]] += water_scale * problem.wet_water_l_per_kwh * stress
     return coefficients
 
 
@@ -184,8 +195,15 @@ def _constraints(
     yw_index: dict[int, int],
     yd_index: dict[int, int],
     count: int,
+    water_cap_l: float,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     rows = _Rows(count)
+    # Water budget: sum_t wet_water_l_per_kwh * yw[t] * stress[t] <= cap.
+    water_terms = [
+        (yw_index[t], problem.wet_water_l_per_kwh * problem.signals[t].water_stress_index)
+        for t in range(HORIZON)
+    ]
+    rows.add(water_terms, -np.inf, water_cap_l)
     for job in problem.jobs:
         terms = [(x_index[(job.job_id, t)], 1.0) for t in problem.windows[job.job_id]]
         rows.add(terms, job.duration_h, job.duration_h)

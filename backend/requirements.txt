@@ -12,3 +12,7 @@ psycopg[binary]==3.2.13
 # Fetch.ai uAgents SDK for FETCHAI_MODE=network (SPEC section 12).
 # Lazy-imported in agents/network.py; FETCHAI_MODE=local runs without it.
 uagents==0.26.1
+
+# Solana devnet memo transactions for SOLANA_MODE=live (SPEC section 14).
+# Lazy-imported in integrations/solana.py; mock mode never imports it.
+solders==0.29.0
