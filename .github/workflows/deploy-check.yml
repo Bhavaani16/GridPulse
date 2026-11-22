@@ -1,0 +1,28 @@
+name: deploy-check
+
+on:
+  push:
+    paths:
+      - "deploy/**"
+      - "DEPLOY.md"
+  pull_request:
+    paths:
+      - "deploy/**"
+      - "DEPLOY.md"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate compose file
+        run: |
+          cd deploy
+          cp .env.example .env
+          docker compose config -q
+
+      - name: Shellcheck deploy scripts
+        run: |
+          sudo apt-get install -y shellcheck
+          shellcheck deploy/provision.sh deploy/healthcheck.sh

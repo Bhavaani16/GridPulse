@@ -1,0 +1,8 @@
+.git
+.venv
+backend/.local
+backend/.pytest_cache
+.pytest_cache
+**/__pycache__
+.env
+Untitled

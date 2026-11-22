@@ -1,0 +1,26 @@
+---
+description: Keep all work in the local project folders. Do not commit, push, or open pull requests.
+alwaysApply: true
+---
+
+# Local files only
+
+Write code, tests, and docs in the project folders and stop there. The lead will put the work on GitHub later.
+
+Do not commit, amend, create branches, push, add a remote, or open a pull request. Do not install or sign in to a git host in order to publish.
+
+This replaces the branch, commit, and pull-request steps in the operating loop. Still run the tests and append `docs/PROGRESS.md`.
+
+```bash
+# BAD
+git checkout -b feat/optimizer-core
+git add backend/optimizer
+git commit -m "Add the solver"
+git push -u origin HEAD
+
+# GOOD
+# edit backend/optimizer/solver.py
+# run pytest from /backend
+# append docs/PROGRESS.md
+# leave the files uncommitted
+```

@@ -1,0 +1,18 @@
+# Frontend build + Caddy. Build from the repo root:
+#   docker build -f deploy/Dockerfile.web --build-arg VITE_API_URL=http://IP -t gridpulse-web .
+FROM node:20-alpine AS build
+
+WORKDIR /build
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+COPY frontend/ ./
+ARG VITE_API_URL
+# Vite bakes VITE_API_URL into the bundle; it is the only API base URL
+# the dashboard uses (SPEC section 15).
+ENV VITE_API_URL=${VITE_API_URL}
+RUN npm run build
+
+FROM caddy:2-alpine
+COPY deploy/Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /build/dist /srv/frontend

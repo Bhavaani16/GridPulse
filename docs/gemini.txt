@@ -1,0 +1,76 @@
+Gemini API — generateContent (REST)
+Source: https://ai.google.dev/api/generate-content and
+https://ai.google.dev/gemini-api/docs/api-key, fetched 2026-10-18.
+Excerpted verbatim where quoted; only the parts GridPulse uses.
+
+Endpoint
+  POST https://generativelanguage.googleapis.com/v1beta/{model=models/*}:generateContent
+  Path parameter model: "Required. The name of the Model to use for
+  generating the completion. Format: models/{model}."
+
+Authentication
+  Header: x-goog-api-key: <API key>
+  (Docs example:  -H "x-goog-api-key: YOUR_API_KEY")
+  Alternative shown in the reference: ?key=$GEMINI_API_KEY query string.
+  GridPulse uses the header so the key never appears in a URL or log.
+  "Treat your Gemini API key like a password."
+
+Request body (JSON)
+  contents[]            object (Content)  Required. "The content of the
+                        current conversation with the model. For
+                        single-turn queries, this is a single instance."
+  systemInstruction     object (Content)  Optional. "Developer set system
+                        instruction(s). Currently, text only."
+  generationConfig      object (GenerationConfig) Optional. Fields used:
+                        temperature (number), maxOutputTokens (integer),
+                        candidateCount (integer).
+
+  Content = { "parts": [ { Part } ], "role": string }
+    role: "Optional. The producer of the content. Must be either 'user'
+    or 'model'."
+  Part (text) = { "text": string }
+
+  Docs curl example:
+    curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$GEMINI_API_KEY" \
+      -H 'Content-Type: application/json' -X POST \
+      -d '{ "contents": [{ "parts":[{"text": "Write a story about a magic backpack."}] }] }'
+
+Response body (GenerateContentResponse)
+  candidates[]          each has content (Content) and finishReason.
+  Text is read as candidates[0].content.parts[*].text
+  (docs: jq ".candidates[].content.parts[].text" response.json)
+  finishReason enum: STOP "Natural stop point of the model or provided
+  stop sequence." MAX_TOKENS "The maximum number of tokens as specified
+  in the request was reached." Also SAFETY, RECITATION, LANGUAGE, OTHER,
+  BLOCKLIST, ... GridPulse accepts only STOP.
+  usageMetadata.thoughtsTokenCount: thinking models spend reasoning
+  tokens that count against maxOutputTokens (observed 244 thought tokens
+  on gemini-flash-latest with a 256 cap -> MAX_TOKENS after 8 text tokens).
+
+  generationConfig.thinkingConfig (ThinkingConfig: includeThoughts,
+  thinkingBudget, thinkingLevel): "An error will be returned if this
+  field is set for models that don't support thinking." Not sent by
+  GridPulse so GEMINI_MODEL can be any text model.
+
+Model ids
+  The api-key page's REST example uses "gemini-3.8-flash". GridPulse takes
+  the id from GEMINI_MODEL and never hardcodes one. Which ids a key can
+  use: GET https://generativelanguage.googleapis.com/v1beta/models with
+  the same header; pick one whose supportedGenerationMethods includes
+  generateContent. Measured 2026-10-18 with the project key, same
+  request, 2048 max tokens:
+    gemini-flash-lite-latest   STOP 2.0 s, 0 thought tokens; 400 if
+                               thinkingConfig is sent
+    gemini-flash-latest        STOP 8.0 s, 1158 thought tokens (over the
+                               6 s SPEC bound); 3.7 s with thinkingBudget 0
+    gemini-2.5-flash(-lite)    404 "no longer available to new users"
+  Recommended GEMINI_MODEL=gemini-flash-lite-latest.
+
+GridPulse request (backend/integrations/gemini.py)
+  model          GEMINI_MODEL
+  header         x-goog-api-key: GEMINI_API_KEY
+  systemInstruction.parts[0].text = INSTRUCTION (SPEC section 11)
+  contents[0] = { role: "user", parts: [ { text: <section-11 summary JSON> } ] }
+  generationConfig = { temperature: 0.2, maxOutputTokens: 2048, candidateCount: 1 }
+  accept candidates[0] only when finishReason == STOP
+  timeout 6 s, one retry, number guard, template fallback.
